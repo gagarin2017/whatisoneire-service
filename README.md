@@ -1,4 +1,4 @@
-# Discover Ireland Localized
+# What's On Eire
 
 A real-time, serverless event aggregation and analytics platform designed to surface hyper-local events across every city and county in Ireland. 
 

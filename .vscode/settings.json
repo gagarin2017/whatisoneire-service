@@ -1,0 +1,30 @@
+{
+  "files.exclude": {
+    // Hide version control and system junk
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/.bsp": true,
+    "**/.metals": true,
+
+    // Hide sbt's internal meta-compilation folders
+    "project/project": true,
+    "project/target": true,
+    "target": true, 
+
+    // Hide everything inside target EXCEPT our clean generated code folder
+    "scala/target/bg-jobs": true,
+    "scala/target/global-logging": true,
+    "scala/target/streams": true,
+    "scala/target/task-temp-directory": true,
+    "scala/target/scala-3.3.5/classes": true,
+    "scala/target/scala-3.3.5/zinc": true,
+    "scala/target/scala-3.3.5/update": true,
+    "scala/target/scala-3.3.5/*.json": true,
+
+    // Hide the resource_managed folder completely
+    "scala/target/scala-3.3.5/resource_managed": true,
+
+    // Hide the tracking metadata file sitting next to your generated classes
+    "scala/target/scala-3.3.5/src_managed/main/smithy": true
+  }
+}

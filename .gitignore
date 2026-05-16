@@ -15,4 +15,13 @@ hs_err_pid*
 
 # Ignore local OS metadata and IDE files
 .DS_Store
-.vscode/
+
+# Block all compiler build outputs
+target/
+**/target/
+project/project/
+project/target/
+
+# Block the interactive bsp (Build Server Protocol) files if they appear
+.bsp/
+.metals/
