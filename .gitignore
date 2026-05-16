@@ -4,3 +4,15 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+# Ignore the secret environment files anywhere in the project
+*.env
+.env
+
+# Ignore downloaded large JSON raw payload samples
+*.json
+!**/settings.json
+
+# Ignore local OS metadata and IDE files
+.DS_Store
+.vscode/
