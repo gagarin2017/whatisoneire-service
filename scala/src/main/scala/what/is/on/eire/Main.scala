@@ -1,4 +1,4 @@
-import what.is.on.eire.*
+package what.is.on.eire
 
 object Main extends App {
   val sampleCoordinates = GeoCoordinates(53.3498, -6.2603)
