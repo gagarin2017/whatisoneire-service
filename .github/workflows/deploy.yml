@@ -79,10 +79,9 @@ jobs:
     # Spin up your Step 4 LocalStack container
     - name: Start LocalStack Container
       run: |
-        docker-compose -f docker-compose.yml up -d
+        docker compose -f docker-compose.yml up -d
         echo "Waiting for LocalStack to fully initialize..."
-        timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"initScripts\": \"initialized\""; do sleep 2; done'
-
+        timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\""; do sleep 2; done'
     - name: CDK Diff against LocalStack
       run: cdklocal diff
       env:
