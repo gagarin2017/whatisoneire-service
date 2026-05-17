@@ -46,6 +46,15 @@ jobs:
     - name: Compile Application & Infra Code
       run: sbt compile
 
+    - name: Build Fat JAR (Assembly)
+      run: sbt "infra/assembly"
+
+    - name: Upload Assembly JAR
+      uses: actions/upload-artifact@v4
+      with:
+        name: lambda-assembly
+        path: infra/target/scala-3.3.5/whats-on-eire-infra-assembly-0.1.0-SNAPSHOT.jar
+
     - name: Run ScalaUnit/ScalaTest UI Tests
       run: sbt test
 
@@ -58,6 +67,12 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+
+    - name: Download Assembly JAR
+      uses: actions/download-artifact@v4
+      with:
+        name: lambda-assembly
+        path: infra/target/scala-3.3.5/
 
     - name: Setup Java 21 (Required to synthesize Scala/Java CDK apps)
       uses: actions/setup-java@v4
