@@ -76,6 +76,10 @@ jobs:
     - name: Install AWS CDK & CDK-Local Global CLI Tools
       run: npm install -g aws-cdk aws-cdk-local
 
+    - name: Install infra-cdk Node dependencies
+      working-directory: ./localstack/infra-cdk
+      run: npm ci
+
     # Spin up your Step 4 LocalStack container using the docker folder path
     - name: Start LocalStack Container
       run: |
@@ -83,10 +87,10 @@ jobs:
         echo "Waiting for LocalStack to fully initialize..."
         timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\""; do sleep 2; done'
 
-    # Overrides cdk.json by routing synthesis back up to your root SBT layer
+    # Pass the TypeScript CDK app explicitly because cdklocal in CI did not reliably pick it up from cdk.json.
     - name: CDK Diff against LocalStack
       working-directory: ./localstack/infra-cdk
-      run: cdklocal diff --app "cd ../.. && sbt \"infra/runMain com.yourproject.infra.CdkAppStack\""
+      run: cdklocal diff --app "npx ts-node --prefer-ts-exts bin/infra-cdk.ts"
       env:
         AWS_DEFAULT_REGION: "eu-west-1"
         AWS_ACCESS_KEY_ID: "mock-local-key"
