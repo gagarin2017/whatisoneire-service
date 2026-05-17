@@ -8,5 +8,7 @@ new InfraCdkStack(app, 'InfraCdkStack', {
     account: '000000000000',
     region: 'eu-west-1',
   },
-  synthesizer: new cdk.BootstraplessSynthesizer(),
+
+  // NOTE: was removed as awslocal diff was throwing an error when ran locally
+  // synthesizer: new cdk.BootstraplessSynthesizer(),
 });
