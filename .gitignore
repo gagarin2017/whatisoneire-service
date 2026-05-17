@@ -28,3 +28,27 @@ project/target/
 # Block the interactive bsp (Build Server Protocol) files if they appear
 .bsp/
 .metals/
+
+# ====================================================================
+# AWS CDK LocalStack Workspace Overrides
+# ====================================================================
+# 1. Ignore background compiled JavaScript files
+**/infra-cdk/bin/**/*.js
+**/infra-cdk/bin/**/*.d.ts
+**/infra-cdk/lib/**/*.js
+**/infra-cdk/lib/**/*.d.ts
+**/infra-cdk/test/**/*.js
+**/infra-cdk/test/**/*.d.ts
+
+# 2. Ignore heavy dependency/output directories
+**/infra-cdk/node_modules/
+**/infra-cdk/cdk.out/
+**/infra-cdk/.cdk.staging/
+
+# 3. Ignore generic tool configuration noise inside the CDK project
+**/infra-cdk/.gitignore
+**/infra-cdk/.npmignore
+**/infra-cdk/README.md
+localstack/infra-cdk/lib/
+localstack/infra-cdk/test/
+localstack/infra-cdk/jest.config.js

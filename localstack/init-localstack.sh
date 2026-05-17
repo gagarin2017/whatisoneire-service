@@ -2,52 +2,94 @@
 set -e
 
 echo "====================================================="
-echo "=== Provisioning LocalStack Infrastructure via Docker ==="
+echo "=== Provisioning LocalStack Infrastructure via CDK ==="
 echo "====================================================="
 echo ""
 
-# Common Docker execution shortcut with credentials embedded
+# Common Docker execution shortcut with credentials embedded for manual checks
 DOCKER_CMD="docker exec -e AWS_ACCESS_KEY_ID=mock_key -e AWS_SECRET_ACCESS_KEY=mock_secret -e AWS_DEFAULT_REGION=eu-west-1 woe_localstack"
 
-# --------------------------------------------------------------------
-# 1. Handle Kinesis Stream (Idempotent)
-# --------------------------------------------------------------------
-echo "Checking Kinesis stream: events-raw-stream..."
+# Ensure we are executing from the root directory of the project
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
-if $DOCKER_CMD aws kinesis describe-stream --stream-name events-raw-stream --endpoint-url http://localhost:4566 >/dev/null 2>&1; then
-    echo "-> Stream 'events-raw-stream' already exists. Skipping creation."
-else
-    echo "-> Creating Kinesis stream: events-raw-stream..."
-    $DOCKER_CMD aws kinesis create-stream \
-        --stream-name events-raw-stream \
-        --shard-count 1 \
-        --endpoint-url http://localhost:4566
-    echo "-> Stream created successfully."
+# Keep the CDK CLI and LocalStack pointed at the same mock account/region.
+export AWS_ACCESS_KEY_ID="mock_key"
+export AWS_SECRET_ACCESS_KEY="mock_secret"
+export AWS_DEFAULT_REGION="eu-west-1"
+export AWS_REGION="eu-west-1"
+export CDK_DEFAULT_ACCOUNT="000000000000"
+export CDK_DEFAULT_REGION="eu-west-1"
+
+cleanup_legacy_resource() {
+    local service="$1"
+    local name="$2"
+
+    case "$service" in
+        kinesis)
+            if $DOCKER_CMD aws kinesis describe-stream --stream-name "$name" --endpoint-url http://localhost:4566 >/dev/null 2>&1; then
+                echo "Found legacy Kinesis stream '$name'. Deleting it so CDK can recreate and manage it..."
+                $DOCKER_CMD aws kinesis delete-stream --stream-name "$name" --enforce-consumer-deletion --endpoint-url http://localhost:4566
+                until ! $DOCKER_CMD aws kinesis describe-stream --stream-name "$name" --endpoint-url http://localhost:4566 >/dev/null 2>&1; do
+                    sleep 2
+                done
+                echo "Legacy Kinesis stream '$name' removed."
+            fi
+            ;;
+        dynamodb)
+            if $DOCKER_CMD aws dynamodb describe-table --table-name "$name" --endpoint-url http://localhost:4566 >/dev/null 2>&1; then
+                echo "Found legacy DynamoDB table '$name'. Deleting it so CDK can recreate and manage it..."
+                $DOCKER_CMD aws dynamodb delete-table --table-name "$name" --endpoint-url http://localhost:4566 >/dev/null
+                until ! $DOCKER_CMD aws dynamodb describe-table --table-name "$name" --endpoint-url http://localhost:4566 >/dev/null 2>&1; do
+                    sleep 2
+                done
+                echo "Legacy DynamoDB table '$name' removed."
+            fi
+            ;;
+    esac
+}
+
+cleanup_failed_stack() {
+    local stack_name="$1"
+    local stack_status
+
+    stack_status=$($DOCKER_CMD aws cloudformation describe-stacks --stack-name "$stack_name" --endpoint-url http://localhost:4566 --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "MISSING")
+
+    case "$stack_status" in
+        CREATE_FAILED|ROLLBACK_COMPLETE|ROLLBACK_FAILED|DELETE_FAILED|UPDATE_ROLLBACK_FAILED|UPDATE_ROLLBACK_COMPLETE)
+            echo "Found failed CloudFormation stack '$stack_name' in state '$stack_status'. Deleting it before redeploy..."
+            $DOCKER_CMD aws cloudformation delete-stack --stack-name "$stack_name" --endpoint-url http://localhost:4566
+            until ! $DOCKER_CMD aws cloudformation describe-stacks --stack-name "$stack_name" --endpoint-url http://localhost:4566 >/dev/null 2>&1; do
+                sleep 2
+            done
+            echo "Failed CloudFormation stack '$stack_name' removed."
+            ;;
+    esac
+}
+
+# --------------------------------------------------------------------
+# 1. Validate CDK Tooling
+# --------------------------------------------------------------------
+if ! command -v cdklocal &> /dev/null; then
+    echo "❌ Error: 'cdklocal' is not installed."
+    echo "Please run: npm install -g aws-cdk-local aws-cdk"
+    exit 1
 fi
 
-echo ""
-
 # --------------------------------------------------------------------
-# 2. Handle DynamoDB Table (Idempotent)
+# 2. Run AWS CDK Local Deployment
 # --------------------------------------------------------------------
-echo "Checking DynamoDB table: irish-events..."
+echo "Navigating to CDK directory..."
+cd "$SCRIPT_DIR/infra-cdk"
 
-if $DOCKER_CMD aws dynamodb describe-table --table-name irish-events --endpoint-url http://localhost:4566 >/dev/null 2>&1; then
-    echo "-> Table 'irish-events' already exists. Skipping creation."
-else
-    echo "-> Creating DynamoDB table: irish-events..."
-    $DOCKER_CMD aws dynamodb create-table \
-        --table-name irish-events \
-        --attribute-definitions \
-            AttributeName=county_id,AttributeType=S \
-            AttributeName=event_date_id,AttributeType=S \
-        --key-schema \
-            AttributeName=county_id,KeyType=HASH \
-            AttributeName=event_date_id,KeyType=RANGE \
-        --billing-mode PAY_PER_REQUEST \
-        --endpoint-url http://localhost:4566
-    echo "-> Table created successfully."
-fi
+echo "Cleaning up legacy manually-provisioned resources..."
+cleanup_legacy_resource kinesis "events-raw-stream"
+cleanup_legacy_resource dynamodb "irish-events"
+cleanup_failed_stack "InfraCdkStack"
+
+echo "Deploying CloudFormation Stack to LocalStack..."
+# Clean deployment call—no bootstrap needed anymore!
+cdklocal deploy --require-approval never
 
 # --------------------------------------------------------------------
 # 3. Automated Sanity Checks
@@ -80,5 +122,5 @@ fi
 
 echo ""
 echo "====================================================="
-echo "=== All Mock Infrastructure Resources Are Ready! ==="
+echo "=== All Infrastructure Resources Deployed Successfully! ==="
 echo "====================================================="
