@@ -2,7 +2,7 @@ package what.is.on.eire
 
 object Main extends App {
   val sampleCoordinates = GeoCoordinates(53.3498, -6.2603)
-  
+
   val myEvent = IrishEvent(
     id = "1A0Zkv4Gkd97a",
     title = "Live Traditional Session",
@@ -15,5 +15,7 @@ object Main extends App {
     source = "Ticketmaster"
   )
 
-  println(s"Successfully initialized Smithy record for: ${myEvent.title} in county ${myEvent.county.value}")
+  println(
+    s"Successfully initialized Smithy record for: ${myEvent.title} in county ${myEvent.county.value}"
+  )
 }

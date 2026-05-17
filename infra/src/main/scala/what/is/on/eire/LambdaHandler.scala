@@ -5,13 +5,19 @@ import java.io.{InputStream, OutputStream}
 import java.nio.charset.StandardCharsets
 
 class LambdaHandler extends RequestStreamHandler {
-  
+
   // Instantiates perfectly because "infra" module depends on the "scala" module
   private val processor = new EventProcessor()
 
-  override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
+  override def handleRequest(
+      input: InputStream,
+      output: OutputStream,
+      context: Context
+  ): Unit = {
     val logger = context.getLogger
-    logger.log("WhatsOnEire Engine invoked successfully via LocalStack baseline!")
+    logger.log(
+      "WhatsOnEire Engine invoked successfully via LocalStack baseline!"
+    )
 
     val rawInput = new String(input.readAllBytes(), StandardCharsets.UTF_8)
     logger.log(s"Received Cloud Event Payload: $rawInput")
@@ -25,14 +31,16 @@ class LambdaHandler extends RequestStreamHandler {
       county = IrishCounty.GALWAY,
       source = "internal-scraper",
       startTime = Some("19:30"),
-      coordinates = Some(GeoCoordinates(latitude = 53.2707, longitude = -9.0568))
+      coordinates =
+        Some(GeoCoordinates(latitude = 53.2707, longitude = -9.0568))
     )
 
     // Hand the event off directly to your domain brain
     val domainResult = processor.process(sampleEvent)
     logger.log(domainResult)
 
-    val resultResponse = s"""{"status": "SUCCESS", "message": "$domainResult"}"""
+    val resultResponse =
+      s"""{"status": "SUCCESS", "message": "$domainResult"}"""
     output.write(resultResponse.getBytes(StandardCharsets.UTF_8))
   }
 }
