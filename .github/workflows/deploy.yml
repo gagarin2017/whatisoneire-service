@@ -83,10 +83,10 @@ jobs:
         echo "Waiting for LocalStack to fully initialize..."
         timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\""; do sleep 2; done'
 
-    # Run the cdklocal command inside your cdk subdirectory context
+    # Overrides cdk.json by routing synthesis back up to your root SBT layer
     - name: CDK Diff against LocalStack
       working-directory: ./localstack/infra-cdk
-      run: cdklocal diff
+      run: cdklocal diff --app "cd ../.. && sbt \"infra/runMain com.yourproject.infra.CdkAppStack\""
       env:
         AWS_DEFAULT_REGION: "eu-west-1"
         AWS_ACCESS_KEY_ID: "mock-local-key"
