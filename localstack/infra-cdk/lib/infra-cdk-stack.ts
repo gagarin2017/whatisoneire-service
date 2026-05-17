@@ -3,8 +3,13 @@ import { Construct } from 'constructs';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
+// Adding Lambdas
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path'; // Useful for resolving file paths
+
+// Addding EventBridge (for cron jobs)
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 
 export class InfraCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -22,7 +27,8 @@ export class InfraCdkStack extends cdk.Stack {
     const dataSources = ['Ticketmaster', 'Meetup', 'FailteIreland', 'DataGov'];
   
     dataSources.forEach(source => {
-      new lambda.Function(this, `${source}Ingestor`, {
+      // A. Define the Lambda Function
+      const ingestorFn = new lambda.Function(this, `${source}Ingestor`, {
         runtime: lambda.Runtime.JAVA_21, // Matches your project setup
         handler: 'what.is.on.eire.LambdaHandler', // The entry point in your Scala code
         code: lambda.Code.fromAsset(jarPath),
@@ -31,8 +37,28 @@ export class InfraCdkStack extends cdk.Stack {
        environment: {
          SOURCE_NAME: source,
          STREAM_NAME: rawStream.streamName,
-       },
-     });
+        },
+      });
+
+      // B. Define the EventBridge Rule (New)
+      // This example runs every 12 hours.
+
+      // Explaining the Cron Syntax: cron(0 */6 * * ? *)
+      // AWS EventBridge cron expressions have 6 fields: Minutes, Hours, Day-of-month, Month, Day-of-week, Year.
+      // - 0: The 0th minute.
+      // - */12: Every 12 hours.
+      // - *: Every day of the month.
+      // - *: Every month.
+      // - ?: Any day of the week (required if Day-of-month is specified).
+      // - *: Every year.
+
+      const rule = new events.Rule(this, `${source}ScheduleRule`, {
+        schedule: events.Schedule.expression('cron(0 */12 * * ? *)'),
+        description: `Scheduled trigger for ${source} data ingestion`,
+      });
+
+      // C. Add the Lambda as a target for the Rule
+      rule.addTarget(new targets.LambdaFunction(ingestorFn));
    });
 
     // 2. Define the DynamoDB Table
