@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 
 class LambdaHandler extends RequestStreamHandler {
   
-  // Instantiates perfectly because infra depends on the scala module
+  // Instantiates perfectly because "infra" module depends on the "scala" module
   private val processor = new EventProcessor()
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {

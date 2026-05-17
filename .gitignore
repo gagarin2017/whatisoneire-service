@@ -16,6 +16,9 @@ hs_err_pid*
 # Ignore local OS metadata and IDE files
 .DS_Store
 
+# Ignore docker localstack files
+docker/.localstack/
+
 # Block all compiler build outputs
 target/
 **/target/
