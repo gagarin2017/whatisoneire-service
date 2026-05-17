@@ -76,13 +76,16 @@ jobs:
     - name: Install AWS CDK & CDK-Local Global CLI Tools
       run: npm install -g aws-cdk aws-cdk-local
 
-    # Spin up your Step 4 LocalStack container
+    # Spin up your Step 4 LocalStack container using the docker folder path
     - name: Start LocalStack Container
       run: |
         docker compose -f docker/docker-compose.yml up -d
         echo "Waiting for LocalStack to fully initialize..."
         timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\""; do sleep 2; done'
+
+    # Run the cdklocal command inside your cdk subdirectory context
     - name: CDK Diff against LocalStack
+      working-directory: ./localstack/infra-cdk
       run: cdklocal diff
       env:
         AWS_DEFAULT_REGION: "eu-west-1"
