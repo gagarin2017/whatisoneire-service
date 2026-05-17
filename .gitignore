@@ -49,6 +49,5 @@ project/target/
 **/infra-cdk/.gitignore
 **/infra-cdk/.npmignore
 **/infra-cdk/README.md
-localstack/infra-cdk/lib/
 localstack/infra-cdk/test/
 localstack/infra-cdk/jest.config.js
