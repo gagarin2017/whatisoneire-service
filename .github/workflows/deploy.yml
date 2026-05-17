@@ -25,6 +25,10 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
+    - name: Setup SBT
+      uses: sbt/setup-sbt@v1
+
+    # Speed up builds by caching SBT dependencies & local metadata
     - name: Cache SBT Dependencies
       uses: actions/cache@v4
       with:
@@ -60,6 +64,9 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '21'
+
+    - name: Setup SBT (Required for CDK app to run 'sbt run' internally)
+      uses: sbt/setup-sbt@v1
 
     - name: Setup Node.js (Required for CDK CLI)
       uses: actions/setup-node@v4
