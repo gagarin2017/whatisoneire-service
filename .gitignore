@@ -10,7 +10,7 @@ hs_err_pid*
 .env
 
 # Ignore downloaded large JSON raw payload samples
-*.json
+#*.json
 !**/settings.json
 
 # Ignore local OS metadata and IDE files
