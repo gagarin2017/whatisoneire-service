@@ -93,7 +93,13 @@ jobs:
 
     - name: Install infra-cdk Node dependencies
       working-directory: ./localstack/infra-cdk
-      run: npm install
+      run: npm ci
+
+    - name: Run CDK Build and Tests
+      working-directory: ./localstack/infra-cdk
+      run: |
+        npm run build
+        npm test
 
     # Spin up your Step 4 LocalStack container using the docker folder path
     - name: Start LocalStack Container
