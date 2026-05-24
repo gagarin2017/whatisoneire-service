@@ -12,7 +12,10 @@ lazy val smithyModule = (project in file("smithy"))
 // Pure Application Core - NO AWS libraries allowed here!
 lazy val scalaModule = (project in file("scala"))
   .settings(
-    name := "whats-on-eire-app"
+    name := "whats-on-eire-app",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.2.19" % Test
+    )
   )
   .dependsOn(smithyModule)
 

@@ -15,6 +15,7 @@ hs_err_pid*
 
 # Ignore local OS metadata and IDE files
 .DS_Store
+.bloop
 
 # Ignore docker localstack files
 docker/.localstack/
@@ -24,6 +25,7 @@ target/
 **/target/
 project/project/
 project/target/
+project/metals.sbt
 
 # Block the interactive bsp (Build Server Protocol) files if they appear
 .bsp/
