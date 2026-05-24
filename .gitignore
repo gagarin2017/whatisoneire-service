@@ -45,9 +45,5 @@ project/target/
 **/infra-cdk/cdk.out/
 **/infra-cdk/.cdk.staging/
 
-# 3. Ignore generic tool configuration noise inside the CDK project
+# 3. Ignore local-only Git noise inside the CDK project
 **/infra-cdk/.gitignore
-**/infra-cdk/.npmignore
-**/infra-cdk/README.md
-localstack/infra-cdk/test/
-localstack/infra-cdk/jest.config.js
