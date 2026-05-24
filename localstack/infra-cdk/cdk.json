@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/infra-cdk.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/infra-cdk.local.ts",
   "watch": {
     "include": [
       "**"

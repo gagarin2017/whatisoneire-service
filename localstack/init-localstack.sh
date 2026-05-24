@@ -87,9 +87,12 @@ cleanup_legacy_resource kinesis "events-raw-stream"
 cleanup_legacy_resource dynamodb "irish-events"
 cleanup_failed_stack "InfraCdkStack"
 
+echo "Bootstrapping CDK resources in LocalStack..."
+npm run bootstrap:local
+
 echo "Deploying CloudFormation Stack to LocalStack..."
 # Clean deployment call—no bootstrap needed anymore!
-cdklocal deploy --require-approval never
+npm run deploy:local
 
 # --------------------------------------------------------------------
 # 3. Automated Sanity Checks

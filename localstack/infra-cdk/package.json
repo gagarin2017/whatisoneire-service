@@ -5,7 +5,12 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "bootstrap:local": "cdklocal bootstrap aws://000000000000/eu-west-1",
+    "deploy:local": "cdklocal deploy --app \"npx ts-node --prefer-ts-exts bin/infra-cdk.local.ts\" --require-approval never",
+    "deploy:prod": "cdk deploy --app \"npx ts-node --prefer-ts-exts bin/infra-cdk.prod.ts\"",
+    "synth:local": "cdklocal synth --app \"npx ts-node --prefer-ts-exts bin/infra-cdk.local.ts\"",
+    "synth:prod": "cdk synth --app \"npx ts-node --prefer-ts-exts bin/infra-cdk.prod.ts\""
   },
   "devDependencies": {
     "@types/jest": "^30",
