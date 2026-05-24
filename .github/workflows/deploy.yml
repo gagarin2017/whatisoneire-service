@@ -109,9 +109,17 @@ jobs:
         timeout 30s sh -c 'until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\""; do sleep 2; done'
 
     # Pass the TypeScript CDK app explicitly because cdklocal in CI did not reliably pick it up from cdk.json.
+    - name: Bootstrap CDK in LocalStack
+      working-directory: ./localstack/infra-cdk
+      run: npm run bootstrap:local
+      env:
+        AWS_DEFAULT_REGION: "eu-west-1"
+        AWS_ACCESS_KEY_ID: "mock-local-key"
+        AWS_SECRET_ACCESS_KEY: "mock-local-secret"
+
     - name: CDK Diff against LocalStack
       working-directory: ./localstack/infra-cdk
-      run: cdklocal diff --app "npx ts-node --prefer-ts-exts bin/infra-cdk.ts"
+      run: cdklocal diff --app "npx ts-node --prefer-ts-exts bin/infra-cdk.local.ts"
       env:
         AWS_DEFAULT_REGION: "eu-west-1"
         AWS_ACCESS_KEY_ID: "mock-local-key"
