@@ -1,9 +1,9 @@
 package what.is.on.eire
 
-import org.scalatest.funsuite.AnyFunSuite
-import what.is.on.eire.IrishEvent.id
+import cats.effect.IO
+import weaver.SimpleIOSuite
 
-class EventProcessorSpec extends AnyFunSuite {
+object EventProcessorSpec extends SimpleIOSuite {
 
   test("process returns a success message containing event title and county") {
     val processor = new EventProcessor
@@ -20,10 +20,10 @@ class EventProcessorSpec extends AnyFunSuite {
       coordinates = None
     )
 
-    val result = processor.process(event)
-
-    assert(
-      result == "Successfully processed Galway Food Festival in County DUBLIN"
-    )
+    IO(processor.process(event)).map { result =>
+      expect(
+        result == "Successfully processed Galway Food Festival in County DUBLIN"
+      )
+    }
   }
 }

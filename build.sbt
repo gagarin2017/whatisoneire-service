@@ -14,7 +14,8 @@ lazy val scalaModule = (project in file("scala"))
   .settings(
     name := "whats-on-eire-app",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.2.19" % Test
+      "org.typelevel" %% "cats-effect" % "3.5.7",
+      "com.disneystreaming" %% "weaver-cats" % "0.8.4"
     )
   )
   .dependsOn(smithyModule)
