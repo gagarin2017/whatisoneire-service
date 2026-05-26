@@ -21,6 +21,8 @@ export AWS_REGION="eu-west-1"
 export CDK_DEFAULT_ACCOUNT="000000000000"
 export CDK_DEFAULT_REGION="eu-west-1"
 
+JAR_PATH="$SCRIPT_DIR/../infra/target/scala-3.3.5/whats-on-eire-infra-assembly-0.1.0-SNAPSHOT.jar"
+
 cleanup_legacy_resource() {
     local service="$1"
     local name="$2"
@@ -68,11 +70,26 @@ cleanup_failed_stack() {
 }
 
 # --------------------------------------------------------------------
-# 1. Validate CDK Tooling
+# 1. Validate Tooling and Build the Lambda Artifact
 # --------------------------------------------------------------------
 if ! command -v cdklocal &> /dev/null; then
-    echo "❌ Error: 'cdklocal' is not installed."
+    echo "Error: 'cdklocal' is not installed."
     echo "Please run: npm install -g aws-cdk-local aws-cdk"
+    exit 1
+fi
+
+if ! command -v sbt &> /dev/null; then
+    echo "Error: 'sbt' is not installed or not on PATH."
+    echo "Please install sbt so the Lambda fat jar can be built before CDK deploy."
+    exit 1
+fi
+
+echo "Building Scala Lambda fat jar..."
+sbt "infra/assembly"
+
+if [ ! -f "$JAR_PATH" ]; then
+    echo "Error: expected Lambda jar was not generated at:"
+    echo "  $JAR_PATH"
     exit 1
 fi
 
@@ -91,7 +108,6 @@ echo "Bootstrapping CDK resources in LocalStack..."
 npm run bootstrap:local
 
 echo "Deploying CloudFormation Stack to LocalStack..."
-# Clean deployment call—no bootstrap needed anymore!
 npm run deploy:local
 
 # --------------------------------------------------------------------
@@ -107,9 +123,9 @@ echo "[Sanity Check 1/2] Verifying Kinesis Stream..."
 STREAM_STATUS=$($DOCKER_CMD aws kinesis describe-stream --stream-name events-raw-stream --endpoint-url http://localhost:4566 --query "StreamDescription.StreamStatus" --output text 2>/dev/null || echo "FAILED")
 
 if [ "$STREAM_STATUS" = "ACTIVE" ]; then
-    echo "✅ Kinesis Stream 'events-raw-stream' is online and ACTIVE."
+    echo "Kinesis Stream 'events-raw-stream' is online and ACTIVE."
 else
-    echo "❌ Kinesis Stream check failed! Current status: $STREAM_STATUS"
+    echo "Kinesis Stream check failed. Current status: $STREAM_STATUS"
 fi
 
 echo ""
@@ -118,9 +134,9 @@ echo "[Sanity Check 2/2] Verifying DynamoDB Table..."
 TABLE_STATUS=$($DOCKER_CMD aws dynamodb describe-table --table-name irish-events --endpoint-url http://localhost:4566 --query "Table.TableStatus" --output text 2>/dev/null || echo "FAILED")
 
 if [ "$TABLE_STATUS" = "ACTIVE" ]; then
-    echo "✅ DynamoDB Table 'irish-events' is online and ACTIVE."
+    echo "DynamoDB Table 'irish-events' is online and ACTIVE."
 else
-    echo "❌ DynamoDB Table check failed! Current status: $TABLE_STATUS"
+    echo "DynamoDB Table check failed. Current status: $TABLE_STATUS"
 fi
 
 echo ""
