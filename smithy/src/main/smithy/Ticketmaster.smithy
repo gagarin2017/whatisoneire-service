@@ -2,72 +2,99 @@ $version: "2"
 
 namespace what.is.on.eire
 
-// Representing the top-level Ticketmaster API Response
+use alloy#simpleRestJson
+
+// ── External Ticketmaster API modelled as a Smithy4s service ──────────────
+
+@simpleRestJson
+service TicketmasterApi {
+    version: "1.0.0"
+    operations: [GetTicketmasterEvents]
+}
+
+@http(method: "GET", uri: "/discovery/v2/events.json")
+operation GetTicketmasterEvents {
+    input: GetTicketmasterEventsInput
+    output: TicketmasterResponse
+}
+
+structure GetTicketmasterEventsInput {
+    @required
+    @httpQuery("countryCode")
+    countryCode: String,
+
+    @required
+    @httpQuery("city")
+    city: String,
+
+    @required
+    @httpQuery("apikey")
+    apiKey: String,
+}
+
+// ── Response models ───────────────────────────────────────────────────────
+
 structure TicketmasterResponse {
+    @required
     _embedded: TicketmasterEmbeddedEvents
 }
 
-// Unpacks the embedded block containing the events list
 structure TicketmasterEmbeddedEvents {
+    @required
     events: TicketmasterEventsList
 }
 
-// A list of raw Ticketmaster events
 list TicketmasterEventsList {
     member: TicketmasterEvent
 }
 
-// Represents a single Ticketmaster event in the response array
 structure TicketmasterEvent {
     @required
     id: String,
 
     @required
-    name: String, // Maps to IrishEvent 'title'
+    name: String,
 
     @required
     url: String,
 
+    @required
     dates: TicketmasterDates,
 
+    @required
     _embedded: TicketmasterEmbeddedVenues
 }
 
-// Unpacks the dates object
 structure TicketmasterDates {
+    @required
     start: TicketmasterStart
 }
 
-// Unpacks the start date and optional time
 structure TicketmasterStart {
     @required
-    localDate: String, // Maps to IrishEvent 'startDate'
-    localTime: String  // Maps to IrishEvent 'startTime'
+    localDate: String,
+    localTime: String
 }
 
-// Unpacks the embedded venues array inside the event
 structure TicketmasterEmbeddedVenues {
+    @required
     venues: TicketmasterVenuesList
 }
 
-// A list of venues where the event takes place
 list TicketmasterVenuesList {
     member: TicketmasterVenue
 }
 
-// Represents the venue details
 structure TicketmasterVenue {
     name: String,
     city: TicketmasterCity,
     location: TicketmasterLocation
 }
 
-// Unpacks the city details
 structure TicketmasterCity {
     name: String
 }
 
-// Unpacks coordinates
 structure TicketmasterLocation {
     latitude: String,
     longitude: String

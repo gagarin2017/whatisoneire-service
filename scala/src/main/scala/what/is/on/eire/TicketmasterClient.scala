@@ -1,77 +1,46 @@
 package what.is.on.eire
 
-import cats.effect.Concurrent
-import cats.syntax.all._
-import org.http4s.MediaType
-import org.http4s.Method
-import org.http4s.Request
-import org.http4s.Uri
-import org.http4s.client.Client
-import org.http4s.headers.Accept
-import smithy4s.Blob
-import smithy4s.json.Json
+import cats.Functor
+import cats.syntax.functor._
 
-class TicketmasterClient[F[_]: Concurrent](
-  client: Client[F],
-  baseUri: Uri,
+class TicketmasterClient[F[_]: Functor](
+  api: TicketmasterApi[F],
   apiKey: String
 ) {
 
-  private val responseDecoder =
-    Json.payloadCodecs.decoders.fromSchema(TicketmasterResponse.schema)
-
-  def getEvents(city: String): F[List[IrishEvent]] = {
-    val uri = baseUri
-      .withQueryParam("countryCode", "IE")
-      .withQueryParam("city", city)
-      .withQueryParam("apikey", apiKey)
-
-    val request = Request[F](Method.GET, uri)
-      .withHeaders(Accept(MediaType.application.json))
-
-    client.expect[Array[Byte]](request).flatMap { bytes =>
-      decode(bytes).map(toIrishEvents(_, city))
-    }
-  }
-
-  private def decode(bytes: Array[Byte]): F[TicketmasterResponse] =
-    Concurrent[F].fromEither(
-      responseDecoder
-        .decode(Blob(bytes))
-        .leftMap(error => new RuntimeException(error.toString))
-    )
+  def getEvents(city: String): F[List[IrishEvent]] =
+    api
+      .getTicketmasterEvents("IE", city, apiKey)
+      .map(toIrishEvents(_, city))
 
   private def toIrishEvents(
     response: TicketmasterResponse,
     requestedCity: String
   ): List[IrishEvent] =
-    response._embedded
-      .flatMap(_.events)
-      .getOrElse(Nil)
-      .flatMap(toIrishEvent(_, requestedCity))
+    response._embedded.events.flatMap(toIrishEvent(_, requestedCity))
 
   private def toIrishEvent(
     event: TicketmasterEvent,
     requestedCity: String
   ): Option[IrishEvent] = {
-    val venue       = event._embedded.flatMap(_.venues).flatMap(_.headOption)
-    val venueCity   =
-      venue.flatMap(_.city).flatMap(_.name).getOrElse(requestedCity)
-    val coordinates = toCoordinates(venue)
+    val venue     = event._embedded.venues.headOption
+    val venueCity = venue
+      .flatMap(_.city)
+      .flatMap(_.name)
+      .getOrElse(requestedCity)
 
-    for {
-      dates <- event.dates
-      start <- dates.start
-    } yield IrishEvent(
-      id = event.id,
-      title = event.name,
-      url = event.url,
-      startDate = start.localDate,
-      startTime = start.localTime,
-      city = venueCity,
-      county = toCounty(venueCity),
-      coordinates = coordinates,
-      source = "Ticketmaster"
+    Some(
+      IrishEvent(
+        id = event.id,
+        title = event.name,
+        url = event.url,
+        startDate = event.dates.start.localDate,
+        startTime = event.dates.start.localTime,
+        city = venueCity,
+        county = toCounty(venueCity),
+        coordinates = toCoordinates(venue),
+        source = "Ticketmaster"
+      )
     )
   }
 

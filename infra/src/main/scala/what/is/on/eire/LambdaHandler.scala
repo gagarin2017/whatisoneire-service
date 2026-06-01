@@ -1,7 +1,9 @@
 package what.is.on.eire
 
-import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import java.io.{InputStream, OutputStream}
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
 class LambdaHandler extends RequestStreamHandler {
@@ -10,9 +12,9 @@ class LambdaHandler extends RequestStreamHandler {
   private val processor = new EventProcessor()
 
   override def handleRequest(
-      input: InputStream,
-      output: OutputStream,
-      context: Context
+    input: InputStream,
+    output: OutputStream,
+    context: Context
   ): Unit = {
     val logger = context.getLogger
     logger.log(
@@ -31,8 +33,7 @@ class LambdaHandler extends RequestStreamHandler {
       county = IrishCounty.GALWAY,
       source = "internal-scraper",
       startTime = Some("19:30"),
-      coordinates =
-        Some(GeoCoordinates(latitude = 53.2707, longitude = -9.0568))
+      coordinates = Some(GeoCoordinates(latitude = 53.2707, longitude = -9.0568))
     )
 
     // Hand the event off directly to your domain brain
