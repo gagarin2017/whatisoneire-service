@@ -30,6 +30,10 @@ structure IrishEvent {
     source: String
 }
 
+list IrishEventList {
+    member: IrishEvent
+}
+
 enum IrishCounty {
     DUBLIN = "IE-D"
     GALWAY = "IE-G"

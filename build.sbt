@@ -15,7 +15,11 @@ lazy val scalaModule = (project in file("scala"))
     name := "whats-on-eire-app",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % "3.5.7",
-      "com.disneystreaming" %% "weaver-cats" % "0.8.4"
+      "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sVersion.value,
+      "com.disneystreaming" %% "weaver-cats" % "0.8.4",
+      "org.http4s" %% "http4s-client" % "0.23.27",
+      "org.http4s" %% "http4s-ember-server" % "0.23.27",
+      "org.http4s" %% "http4s-dsl" % "0.23.27" % Test
     )
   )
   .dependsOn(smithyModule)
