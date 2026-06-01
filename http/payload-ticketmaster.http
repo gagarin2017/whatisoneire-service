@@ -2,5 +2,5 @@
 @apiKey = {{$dotenv TICKETMASTER_API_KEY}}
 
 ### Get Local Events in Ireland from Ticketmaster Discovery API
-GET https://app.ticketmaster.com/discovery/v2/events.json?countryCode=IE&apikey={{apiKey}}
+GET https://app.ticketmaster.com/discovery/v2/events.json?countryCode=IE&city=Dublin&apikey={{apiKey}}
 Accept: application/json
