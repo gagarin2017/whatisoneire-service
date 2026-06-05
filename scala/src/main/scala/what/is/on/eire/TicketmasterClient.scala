@@ -8,26 +8,37 @@ class TicketmasterClient[F[_]: Functor](
   apiKey: String
 ) {
 
+  /** Fetch events for a specific Irish city. */
   def getEvents(city: String): F[List[IrishEvent]] =
     api
-      .getTicketmasterEvents("IE", city, apiKey)
-      .map(toIrishEvents(_, city))
+      .getTicketmasterEvents("IE", apiKey, Some(city))
+      .map(toIrishEvents(_, Some(city)))
+
+  /** Fetch ALL events across Ireland (no city filter).
+    *
+    * Used by the cron-triggered ingestion to get everything without knowing which cities exist.
+    */
+  def getAllEvents: F[List[IrishEvent]] =
+    api
+      .getTicketmasterEvents("IE", apiKey, None)
+      .map(toIrishEvents(_, None))
 
   private def toIrishEvents(
     response: TicketmasterResponse,
-    requestedCity: String
+    requestedCity: Option[String]
   ): List[IrishEvent] =
     response._embedded.events.flatMap(toIrishEvent(_, requestedCity))
 
   private def toIrishEvent(
     event: TicketmasterEvent,
-    requestedCity: String
+    requestedCity: Option[String]
   ): Option[IrishEvent] = {
     val venue     = event._embedded.venues.headOption
     val venueCity = venue
       .flatMap(_.city)
       .flatMap(_.name)
-      .getOrElse(requestedCity)
+      .orElse(requestedCity)
+      .getOrElse("Unknown")
 
     Some(
       IrishEvent(

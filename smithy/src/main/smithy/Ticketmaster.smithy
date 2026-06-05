@@ -23,7 +23,6 @@ structure GetTicketmasterEventsInput {
     @httpQuery("countryCode")
     countryCode: String,
 
-    @required
     @httpQuery("city")
     city: String,
 

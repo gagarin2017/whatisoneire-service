@@ -30,6 +30,7 @@ project/metals.sbt
 # Block the interactive bsp (Build Server Protocol) files if they appear
 .bsp/
 .metals/
+.idea/
 
 # ====================================================================
 # AWS CDK LocalStack Workspace Overrides
