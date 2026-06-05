@@ -33,20 +33,23 @@ class TicketmasterClient[F[_]: Functor](
     event: TicketmasterEvent,
     requestedCity: Option[String]
   ): Option[IrishEvent] = {
-    val venue     = event._embedded.venues.headOption
+    val venue     = event._embedded.venues.flatMap(_.headOption)
     val venueCity = venue
       .flatMap(_.city)
       .flatMap(_.name)
       .orElse(requestedCity)
       .getOrElse("Unknown")
+    val start     = event.dates.start
+    val startDate = start.flatMap(_.localDate).getOrElse("")
+    val startTime = start.flatMap(_.localTime)
 
     Some(
       IrishEvent(
         id = event.id,
         title = event.name,
-        url = event.url,
-        startDate = event.dates.start.localDate,
-        startTime = event.dates.start.localTime,
+        url = event.url.getOrElse(""),
+        startDate = startDate,
+        startTime = startTime,
         city = venueCity,
         county = toCounty(venueCity),
         coordinates = toCoordinates(venue),

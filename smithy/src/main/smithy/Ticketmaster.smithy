@@ -54,7 +54,6 @@ structure TicketmasterEvent {
     @required
     name: String,
 
-    @required
     url: String,
 
     @required
@@ -65,18 +64,15 @@ structure TicketmasterEvent {
 }
 
 structure TicketmasterDates {
-    @required
     start: TicketmasterStart
 }
 
 structure TicketmasterStart {
-    @required
     localDate: String,
     localTime: String
 }
 
 structure TicketmasterEmbeddedVenues {
-    @required
     venues: TicketmasterVenuesList
 }
 

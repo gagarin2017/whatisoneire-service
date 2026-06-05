@@ -40,11 +40,14 @@ lazy val infra = (project in file("infra"))
     libraryDependencies ++= Seq(
       "com.amazonaws"          % "aws-lambda-java-core"   % "1.2.3",
       "com.amazonaws"          % "aws-lambda-java-events" % "3.16.1",
-      "software.amazon.awssdk" % "kinesis"                % "2.29.0"
+      "software.amazon.awssdk" % "kinesis"                % "2.29.0",
+      "software.amazon.awssdk" % "dynamodb"               % "2.29.0",
+      "software.amazon.awssdk" % "url-connection-client"  % "2.29.0"
     ),
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-      case _                             => MergeStrategy.first
+      case PathList("META-INF", "services", _*) => MergeStrategy.concat
+      case PathList("META-INF", xs @ _*)        => MergeStrategy.discard
+      case _                                    => MergeStrategy.first
     }
   )
   .dependsOn(scalaModule)
