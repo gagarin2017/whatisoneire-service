@@ -27,18 +27,6 @@ class IngestionLambdaHandler extends RequestStreamHandler {
     val rawInput = new String(input.readAllBytes(), StandardCharsets.UTF_8)
     logger.log(s"Incoming event payload (first 200 chars): ${rawInput.take(200)}")
 
-    // ── Parse the irish-location header from the incoming payload ──
-    // Supports both: { "headers": { "irish-location": "Dublin" } }
-    // and:           { "headers": { "irish-location": "Dublin" } }
-    val requestedCity: Option[String] = {
-      val headerRegex = """irish-location"\s*:\s*"([^"]+)"""".r
-      rawInput match {
-        case headerRegex(city) => Some(city)
-        case _                 => None // cron trigger — no location
-      }
-    }
-    logger.log(s"Requested city: ${requestedCity.getOrElse("ALL (cron)")}")
-
     // ── Build http4s client ──────────────────────────────────────────
     val httpClient
       : cats.effect.kernel.Resource[cats.effect.IO, org.http4s.client.Client[cats.effect.IO]] =
@@ -62,22 +50,20 @@ class IngestionLambdaHandler extends RequestStreamHandler {
     } yield {
       val tmClient = new TicketmasterClient[cats.effect.IO](tmApi, apiKey)
 
-      // Fetch events — filtered by city if requested, otherwise all
-      val fetch = requestedCity match {
-        case Some(city) => tmClient.getEvents(city)
-        case None       => tmClient.getAllEvents
-      }
+      val service = new IngestionService[IO](
+        fetchByCity = city => tmClient.getEvents(city),
+        fetchAll = tmClient.getAllEvents
+      )
 
-      val events = fetch.unsafeRunSync()
-      val label  = requestedCity.getOrElse("all Ireland")
-      logger.log(s"Fetched ${events.size} events from Ticketmaster for $label")
+      val events = service.fetchEvents(rawInput).unsafeRunSync()
+      logger.log(s"Fetched ${events.size} events from Ticketmaster")
 
       events.foreach { e =>
         publisher.publish(e).unsafeRunSync()
         logger.log(s"  Published: ${e.id} - ${e.title} @ ${e.city}, ${e.county}")
       }
 
-      events // return so the response includes the count
+      events
     }
 
     try {
@@ -87,7 +73,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
       output.write(result.getBytes(StandardCharsets.UTF_8))
     } catch {
       case e: Exception =>
-        logger.log(s"ERROR: ${e.getMessage}")
+        logger.log(s"ERROR: ${e.getMessage}\n${e.getStackTrace.map(_.toString).mkString("\n")}")
         val error = s"""{"status": "FAILED", "message": "${e.getMessage}"}"""
         output.write(error.getBytes(StandardCharsets.UTF_8))
     }

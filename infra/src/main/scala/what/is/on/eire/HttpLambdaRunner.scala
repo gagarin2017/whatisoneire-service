@@ -37,9 +37,9 @@ object HttpLambdaRunner extends IOApp.Simple {
           case None       => BadRequest("Missing irish-location header")
         }
 
-      // Simulate EventBridge cron
+      // Simulate EventBridge cron — no irish-location header
       case GET -> Root / "cron" / "trigger"           =>
-        Ok(invokeLambda("cron"))
+        Ok(invokeLambdaCron())
     }
 
     EmberServerBuilder
@@ -49,13 +49,30 @@ object HttpLambdaRunner extends IOApp.Simple {
       .useForever
   }
 
-  /** Serializes an HTTP request into a Lambda invocation. */
+  /** Serializes a client HTTP request into a Lambda invocation payload. */
   private def invokeLambda(location: String): String = {
     val inputJson =
       s"""{
          |  "headers": { "irish-location": "$location" },
          |  "body": "{}"
          |}""".stripMargin
+
+    invokeHandler(inputJson)
+  }
+
+  /** Serializes a cron trigger (no irish-location header) into a Lambda invocation payload. */
+  private def invokeLambdaCron(): String = {
+    val inputJson =
+      """{
+        |  "headers": {},
+        |  "body": "{}"
+        |}""".stripMargin
+
+    invokeHandler(inputJson)
+  }
+
+  /** Calls the Lambda handler with a pre-built JSON payload. */
+  private def invokeHandler(inputJson: String): String = {
 
     val inputStream  = new ByteArrayInputStream(inputJson.getBytes(StandardCharsets.UTF_8))
     val outputStream = new ByteArrayOutputStream()
