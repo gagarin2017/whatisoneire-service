@@ -42,7 +42,7 @@ class ProcessingLambdaHandler extends RequestHandler[KinesisEvent, String] {
     }
 
     val localstackPort =
-      Option(System.getenv("LOCALSTACK_PORT")).flatMap(p => scala.util.Try(p.toInt).toOption)
+      EnvLoader.get("LOCALSTACK_PORT").flatMap(p => scala.util.Try(p.toInt).toOption)
 
     val program = DynamoDbEventRepository.resource(tableName, localstackPort).use { repo =>
       val service = new EventStoreService[IO](repo.saveEvent)

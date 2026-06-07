@@ -10,46 +10,61 @@ import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._
+import org.http4s.server.middleware.CORS
 
-/** Local HTTP server that invokes the Ingestion Lambda directly.
+/** Local HTTP server that mimics API Gateway.
   *
-  * Stand-in for API Gateway. Serializes the HTTP request into a JSON payload, calls
-  * LambdaHandler.handleRequest, and returns the response.
+  * Routes incoming HTTP requests to the appropriate Lambda handler, simulating how API Gateway
+  * invokes Lambda functions in production.
   *
   * Usage: curl -H "irish-location: Dublin" http://localhost:8080/event/pullEvents curl
-  * http://localhost:8080/cron/trigger
+  * http://localhost:8080/getEvents curl -H "irish-location: Dublin" http://localhost:8080/getEvents
   */
 object HttpLambdaRunner extends IOApp.Simple {
 
-  private val handler = new IngestionLambdaHandler()
+  private val ingestionHandler = new IngestionLambdaHandler()
+  private val getEventsHandler = new GetEventsLambdaHandler()
 
   override def run: IO[Unit] = {
 
-    val routes = HttpRoutes.of[IO] {
+    val routes = CORS.policy
+      .withAllowOriginHost(_ => true)
+      .withAllowCredentials(false)
+      .apply(HttpRoutes.of[IO] {
 
-      // Client request — extract irish-location header
-      case req @ GET -> Root / "event" / "pullEvents" =>
-        val location = req.headers
-          .get(org.typelevel.ci.CIString("irish-location"))
-          .map(_.head.value)
-        location match {
-          case Some(city) => Ok(invokeLambda(city))
-          case None       => BadRequest("Missing irish-location header")
-        }
+        // ── Ingest events from Ticketmaster ────────────────────────────
+        case req @ GET -> Root / "event" / "pullEvents" =>
+          val location = req.headers
+            .get(org.typelevel.ci.CIString("irish-location"))
+            .map(_.head.value)
+          location match {
+            case Some(city) => Ok(invokeLambda(city))
+            case None       => BadRequest("Missing irish-location header")
+          }
 
-      // Simulate EventBridge cron — no irish-location header
-      case GET -> Root / "cron" / "trigger"           =>
-        Ok(invokeLambdaCron())
-    }
+        // ── Read events from DynamoDB ──────────────────────────────────
+        case req @ GET -> Root / "getEvents"            =>
+          val city = req.headers
+            .get(org.typelevel.ci.CIString("irish-location"))
+            .map(_.head.value)
+          Ok(invokeReadLambda(city))
+      })
+
+    val port = com.comcast.ip4s.Port
+      .fromInt(
+        EnvLoader.get("APP_PORT").flatMap(p => scala.util.Try(p.toInt).toOption).getOrElse(8080)
+      )
+      .getOrElse(com.comcast.ip4s.Port.fromInt(8080).get)
 
     EmberServerBuilder
       .default[IO]
+      .withPort(port)
       .withHttpApp(routes.orNotFound)
       .build
       .useForever
   }
 
-  /** Serializes a client HTTP request into a Lambda invocation payload. */
+  /** Build a Lambda input payload and invoke the Ingestion Lambda. */
   private def invokeLambda(location: String): String = {
     val inputJson =
       s"""{
@@ -57,32 +72,39 @@ object HttpLambdaRunner extends IOApp.Simple {
          |  "body": "{}"
          |}""".stripMargin
 
-    invokeHandler(inputJson)
+    invokeHandler(ingestionHandler, inputJson)
   }
 
-  /** Serializes a cron trigger (no irish-location header) into a Lambda invocation payload. */
-  private def invokeLambdaCron(): String = {
-    val inputJson =
-      """{
-        |  "headers": {},
-        |  "body": "{}"
-        |}""".stripMargin
+  /** Build a Lambda input payload and invoke the GetEvents Lambda. */
+  private def invokeReadLambda(city: Option[String]): String = {
+    val headerField = city match {
+      case Some(c) => s""""irish-location": "$c""""
+      case None    => ""
+    }
+    val inputJson   =
+      s"""{
+         |  "headers": { $headerField },
+         |  "body": "{}"
+         |}""".stripMargin
 
-    invokeHandler(inputJson)
+    invokeHandler(getEventsHandler, inputJson)
   }
 
-  /** Calls the Lambda handler with a pre-built JSON payload. */
-  private def invokeHandler(inputJson: String): String = {
-
+  /** Serialize the HTTP request into a JSON payload, call the Lambda handler, and return the
+    * response string.
+    */
+  private def invokeHandler(
+    handler: com.amazonaws.services.lambda.runtime.RequestStreamHandler,
+    inputJson: String
+  ): String = {
     val inputStream  = new ByteArrayInputStream(inputJson.getBytes(StandardCharsets.UTF_8))
     val outputStream = new ByteArrayOutputStream()
 
-    // Dummy Lambda context (LambdaRuntime provides this in production)
     val dummyContext = new Context {
       def getAwsRequestId: String                                               = "local-test"
       def getLogGroupName: String                                               = "local"
       def getLogStreamName: String                                              = "local"
-      def getFunctionName: String                                               = "whats-on-eire-ingestion"
+      def getFunctionName: String                                               = "whats-on-eire-local"
       def getFunctionVersion: String                                            = "1"
       def getInvokedFunctionArn: String                                         = "arn:aws:lambda:local:test"
       def getIdentity: com.amazonaws.services.lambda.runtime.CognitoIdentity    = null

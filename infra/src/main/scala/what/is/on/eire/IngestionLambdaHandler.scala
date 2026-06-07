@@ -12,9 +12,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
 
   private given runtime: IORuntime = IORuntime.global
 
-  private val apiKey: String =
-    Option(System.getenv("TICKETMASTER_API_KEY"))
-      .getOrElse(throw new RuntimeException("TICKETMASTER_API_KEY env var not set"))
+  private val apiKey: String = EnvLoader.require("TICKETMASTER_API_KEY")
 
   override def handleRequest(
     input: InputStream,
@@ -44,7 +42,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
                      .resource
       publisher <- {
         val localstackPort =
-          Option(System.getenv("LOCALSTACK_PORT")).flatMap(p => scala.util.Try(p.toInt).toOption)
+          EnvLoader.get("LOCALSTACK_PORT").flatMap(p => scala.util.Try(p.toInt).toOption)
         KinesisEventPublisher.resource("events-raw-stream", localstackPort)
       }
     } yield {

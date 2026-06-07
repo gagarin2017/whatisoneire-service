@@ -4,6 +4,7 @@ import { KinesisSubStack } from "./kinesis-substack";
 import { LambdasSubStack } from "./lambdas-substack";
 import { DynamoDbSubStack } from "./dynamodb-substack";
 import { ProcessingSubStack } from "./processing-substack";
+import { GetEventsSubStack } from "./get-events-substack";
 
 /**
  * Root Infrastructure Stack for WhatsOnEire services.
@@ -11,6 +12,7 @@ import { ProcessingSubStack } from "./processing-substack";
  * - KinesisSubStack: provisions raw stream buffering.
  * - LambdasSubStack: provisions ingestion schedulers & Lambda handlers.
  * - DynamoDbSubStack: provisions normalized storage table.
+ * - GetEventsSubStack: provisions read-API Lambda for frontend event queries.
  */
 export class InfraCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -18,7 +20,7 @@ export class InfraCdkStack extends cdk.Stack {
 
     // Stack-level description
     this.templateOptions.description =
-      "WhatsOnEire Infrastructure Stack - Kinesis Streams, Ingestion Lambdas, DynamoDB Tables and EventBridge Scheduler Rules.";
+      "WhatsOnEire Infrastructure Stack - Kinesis Streams, Ingestion Lambdas, Processing Lambda, GetEvents Lambda, DynamoDB Table and EventBridge Rules.";
 
     // Apply global Tags to propagate down to all resources in all sub-stacks.
     // Commented out for LocalStack compatibility — the Kinesis Event Source Mapping
@@ -41,6 +43,11 @@ export class InfraCdkStack extends cdk.Stack {
     // 4. Instantiate the Processing Sub-stack
     new ProcessingSubStack(this, "ProcessingSubStack", {
       rawStream: kinesisStack.rawStream,
+      eventsTable: dynamoStack.eventsTable,
+    });
+
+    // 5. Instantiate the GetEvents Sub-stack (read-API Lambda)
+    new GetEventsSubStack(this, "GetEventsSubStack", {
       eventsTable: dynamoStack.eventsTable,
     });
   }

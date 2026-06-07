@@ -2,9 +2,11 @@ package what.is.on.eire
 
 import cats.effect.IO
 import java.util.HashMap
+import scala.jdk.CollectionConverters._
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest
 
 /** Persists [[IrishEvent]] records into the DynamoDB `irish-events` table.
   *
@@ -62,6 +64,58 @@ class DynamoDbEventRepository(
 
     client.putItem(request)
     s"${event.id} - ${event.title}"
+  }
+
+  /** Query events from DynamoDB, optionally filtered by city.
+    *
+    * @param city
+    *   if provided, only events matching this city (case-insensitive) are returned
+    * @return
+    *   a list of [[IrishEvent]] objects
+    */
+  def getEvents(city: Option[String]): IO[List[IrishEvent]] = IO {
+    val scanRequest = ScanRequest.builder
+      .tableName(tableName)
+      .build()
+
+    val result   = client.scan(scanRequest)
+    val allItems = result.items().asScala.toList.map(itemToEvent)
+
+    city match {
+      case Some(c) => allItems.filter(_.city.equalsIgnoreCase(c))
+      case None    => allItems
+    }
+  }
+
+  /** Convert a DynamoDB item (Map[String, AttributeValue]) to an [[IrishEvent]]. */
+  private def itemToEvent(item: java.util.Map[String, AttributeValue]): IrishEvent = {
+    val attrs = item.asScala
+
+    def s(key: String): String            = attrs.get(key).map(_.s()).getOrElse("")
+    def optS(key: String): Option[String] = attrs.get(key).map(_.s()).filter(_.nonEmpty)
+    def optD(key: String): Option[Double] =
+      attrs.get(key).flatMap(a => scala.util.Try(a.n().toDouble).toOption)
+
+    val county = IrishCounty.values
+      .find(_.name == s("county"))
+      .getOrElse(IrishCounty.UNKNOWN)
+
+    val coordinates = for {
+      lat <- optD("latitude")
+      lng <- optD("longitude")
+    } yield GeoCoordinates(lat, lng)
+
+    IrishEvent(
+      id = s("id"),
+      title = s("title"),
+      url = s("url"),
+      startDate = s("startDate"),
+      startTime = optS("startTime"),
+      city = s("city"),
+      county = county,
+      coordinates = coordinates,
+      source = s("source")
+    )
   }
 
 }

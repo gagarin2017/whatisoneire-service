@@ -37,6 +37,7 @@ lazy val scalaModule = (project in file("scala"))
 lazy val infra = (project in file("infra"))
   .settings(
     name                             := "whats-on-eire-infra",
+    Compile / mainClass              := Some("what.is.on.eire.HttpLambdaRunner"),
     libraryDependencies ++= Seq(
       "com.amazonaws"          % "aws-lambda-java-core"   % "1.2.3",
       "com.amazonaws"          % "aws-lambda-java-events" % "3.16.1",
@@ -56,5 +57,6 @@ lazy val root = (project in file("."))
   .aggregate(smithyModule, scalaModule, infra)
   .settings(
     // Now, running or packaging at the root targets the infra module's artifact!
+    run / aggregate := false,
     Compile / run := (infra / Compile / run).evaluated
   )
