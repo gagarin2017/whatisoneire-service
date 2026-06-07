@@ -54,10 +54,10 @@ class GetEventsLambdaHandler extends RequestStreamHandler {
 
       import smithy4s.Schema
 
-      val outputEvent = PullEventsOutput(events)
-      val encoder     = smithy4s.json.Json.payloadCodecs.encoders.fromSchema(Schema[PullEventsOutput])
-      val blob        = encoder.encode(outputEvent)
-      val jsonBytes   = blob.toArray
+      val listSchema = smithy4s.schema.Schema.list(Schema[IrishEvent])
+      val encoder    = smithy4s.json.Json.payloadCodecs.encoders.fromSchema(listSchema)
+      val blob       = encoder.encode(events)
+      val jsonBytes  = blob.toArray
       output.write(jsonBytes)
     } catch {
       case e: Exception =>

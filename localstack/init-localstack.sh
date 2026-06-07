@@ -23,6 +23,29 @@ export CDK_DEFAULT_REGION="eu-west-1"
 
 JAR_PATH="$SCRIPT_DIR/../infra/target/scala-3.3.5/whats-on-eire-infra-assembly-0.1.0-SNAPSHOT.jar"
 
+# --------------------------------------------------------------------
+# 0. Wipe LocalStack persistent volume — start completely fresh
+# --------------------------------------------------------------------
+echo "Stopping LocalStack container..."
+docker stop woe_localstack 2>/dev/null || true
+
+echo "Removing persistent volume..."
+LOCALSTACK_VOLUME_DIR="${LOCALSTACK_VOLUME_DIR:-docker/.localstack}"
+rm -rf "$LOCALSTACK_VOLUME_DIR"
+
+echo "Removing LocalStack container..."
+docker rm woe_localstack 2>/dev/null || true
+
+echo "Starting LocalStack container fresh..."
+cd "$SCRIPT_DIR/.."
+docker compose -f docker/docker-compose.yml up -d
+
+echo "Waiting for LocalStack to be ready..."
+until curl -s http://localhost:4566/_localstack/health | grep -q '"dynamodb".*"available"' 2>/dev/null; do
+  sleep 3
+done
+echo "LocalStack is ready."
+
 cleanup_legacy_resource() {
     local service="$1"
     local name="$2"
