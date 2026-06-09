@@ -47,6 +47,7 @@ class DynamoDbEventRepository(
     item.put("city", AttributeValue.builder().s(event.city).build())
     item.put("county", AttributeValue.builder().s(event.county.toString).build())
     item.put("source", AttributeValue.builder().s(event.source).build())
+    item.put("rawPayload", AttributeValue.builder().s(event.rawPayload).build())
 
     // Optional fields
     event.startTime.foreach { t =>
@@ -114,7 +115,8 @@ class DynamoDbEventRepository(
       city = s("city"),
       county = county,
       coordinates = coordinates,
-      source = s("source")
+      source = s("source"),
+      rawPayload = s("rawPayload")
     )
   }
 

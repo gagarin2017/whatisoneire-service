@@ -17,7 +17,8 @@ object EventProcessorSpec extends SimpleIOSuite {
       county = IrishCounty.DUBLIN,
       source = "Ticketmaster",
       startTime = None,
-      coordinates = None
+      coordinates = None,
+      rawPayload = "{}"
     )
 
     IO(processor.process(event)).map { result =>

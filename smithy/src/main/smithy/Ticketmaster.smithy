@@ -47,50 +47,230 @@ list TicketmasterEventsList {
     member: TicketmasterEvent
 }
 
+// ── Event (top level) ─────────────────────────────────────────────────────
+
 structure TicketmasterEvent {
     @required
-    id: String,
+    name: String
 
     @required
-    name: String,
+    id: String
 
-    url: String,
+    url: String
+    locale: String
+
+    images: TicketmasterImages
+    sales: TicketmasterSales
 
     @required
-    dates: TicketmasterDates,
+    dates: TicketmasterDates
+
+    classifications: TicketmasterClassifications
+
+    promoter: TicketmasterPromoter
+    promoters: TicketmasterPromoters
+
+    info: String
+    pleaseNote: String
+
+    seatmap: TicketmasterSeatmap
 
     @required
-    _embedded: TicketmasterEmbeddedVenues
+    _embedded: TicketmasterEventEmbedded
 }
+
+// ── Images ────────────────────────────────────────────────────────────────
+
+list TicketmasterImages {
+    member: TicketmasterImage
+}
+
+structure TicketmasterImage {
+    @required
+    url: String
+    ratio: String
+    width: Integer
+    height: Integer
+    fallback: Boolean
+}
+
+// ── Sales ─────────────────────────────────────────────────────────────────
+
+structure TicketmasterSales {
+    @required
+    public: TicketmasterSalePeriod
+}
+
+structure TicketmasterSalePeriod {
+    startDateTime: String
+    endDateTime: String
+}
+
+// ── Dates (extended) ──────────────────────────────────────────────────────
 
 structure TicketmasterDates {
-    start: TicketmasterStart
+    @required
+    start: TicketmasterDatePoint
+    end: TicketmasterDatePoint
+    timezone: String
+    status: TicketmasterDateStatus
 }
 
-structure TicketmasterStart {
-    localDate: String,
+structure TicketmasterDatePoint {
+    localDate: String
     localTime: String
 }
 
-structure TicketmasterEmbeddedVenues {
-    venues: TicketmasterVenuesList
+structure TicketmasterDateStatus {
+    code: String
 }
+
+// ── Classifications ───────────────────────────────────────────────────────
+
+list TicketmasterClassifications {
+    member: TicketmasterClassification
+}
+
+structure TicketmasterClassification {
+    primary: Boolean
+    segment: TicketmasterCategory
+    genre: TicketmasterCategory
+    subGenre: TicketmasterCategory
+}
+
+structure TicketmasterCategory {
+    @required
+    id: String
+    @required
+    name: String
+}
+
+// ── Promoter ──────────────────────────────────────────────────────────────
+
+structure TicketmasterPromoter {
+    id: String
+    name: String
+    description: String
+}
+
+list TicketmasterPromoters {
+    member: TicketmasterPromoter
+}
+
+// ── Seatmap ───────────────────────────────────────────────────────────────
+
+structure TicketmasterSeatmap {
+    staticUrl: String
+}
+
+// ── Event-level _embedded (venues + attractions) ──────────────────────────
+
+structure TicketmasterEventEmbedded {
+    venues: TicketmasterVenuesList
+    attractions: TicketmasterAttractionsList
+}
+
+// ── Venue ─────────────────────────────────────────────────────────────────
 
 list TicketmasterVenuesList {
     member: TicketmasterVenue
 }
 
 structure TicketmasterVenue {
-    name: String,
-    city: TicketmasterCity,
+    name: String
+    id: String
+    url: String
+
+    city: TicketmasterCity
+    country: TicketmasterCountry
+    address: TicketmasterAddress
+    postalCode: String
     location: TicketmasterLocation
+    timezone: String
+
+    images: TicketmasterImages
+
+    boxOfficeInfo: TicketmasterBoxOfficeInfo
+    parkingDetail: String
+    accessibleSeatingDetail: String
+
+    generalInfo: TicketmasterGeneralInfo
 }
 
 structure TicketmasterCity {
     name: String
 }
 
+structure TicketmasterCountry {
+    name: String
+    countryCode: String
+}
+
+structure TicketmasterAddress {
+    line1: String
+}
+
 structure TicketmasterLocation {
-    latitude: String,
+    latitude: String
     longitude: String
+}
+
+structure TicketmasterBoxOfficeInfo {
+    phoneNumberDetail: String
+    openHoursDetail: String
+    acceptedPaymentDetail: String
+}
+
+structure TicketmasterGeneralInfo {
+    childRule: String
+}
+
+// ── Attraction / Artist ───────────────────────────────────────────────────
+
+list TicketmasterAttractionsList {
+    member: TicketmasterAttraction
+}
+
+structure TicketmasterAttraction {
+    @required
+    name: String
+    @required
+    id: String
+
+    url: String
+
+    images: TicketmasterImages
+    classifications: TicketmasterClassifications
+    externalLinks: TicketmasterExternalLinks
+}
+
+structure TicketmasterExternalLinks {
+    youtube: TicketmasterLinkList
+    twitter: TicketmasterLinkList
+    itunes: TicketmasterLinkList
+    lastfm: TicketmasterLinkList
+    tiktok: TicketmasterLinkList
+    spotify: TicketmasterLinkList
+    wiki: TicketmasterLinkList
+    facebook: TicketmasterLinkList
+    instagram: TicketmasterLinkList
+    homepage: TicketmasterLinkList
+    musicbrainz: TicketmasterMusicbrainzList
+}
+
+list TicketmasterLinkList {
+    member: TicketmasterLink
+}
+
+structure TicketmasterLink {
+    url: String
+}
+
+list TicketmasterMusicbrainzList {
+    member: TicketmasterMusicbrainz
+}
+
+structure TicketmasterMusicbrainz {
+    id: String
+    url: String
 }

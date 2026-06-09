@@ -2,6 +2,9 @@ package what.is.on.eire
 
 import cats.Functor
 import cats.syntax.functor._
+import java.nio.charset.StandardCharsets
+import smithy4s.Schema
+import smithy4s.json.Json
 
 class TicketmasterClient[F[_]: Functor](
   api: TicketmasterApi[F],
@@ -40,8 +43,8 @@ class TicketmasterClient[F[_]: Functor](
       .orElse(requestedCity)
       .getOrElse("Unknown")
     val start     = event.dates.start
-    val startDate = start.flatMap(_.localDate).getOrElse("")
-    val startTime = start.flatMap(_.localTime)
+    val startDate = start.localDate.getOrElse("")
+    val startTime = start.localTime
 
     Some(
       IrishEvent(
@@ -53,9 +56,17 @@ class TicketmasterClient[F[_]: Functor](
         city = venueCity,
         county = toCounty(venueCity),
         coordinates = toCoordinates(venue),
-        source = "Ticketmaster"
+        source = "Ticketmaster",
+        rawPayload = serializeEvent(event)
       )
     )
+  }
+
+  /** Serialize the full [[TicketmasterEvent]] to a JSON string for storage as rawPayload. */
+  private def serializeEvent(event: TicketmasterEvent): String = {
+    val encoder = Json.payloadCodecs.encoders.fromSchema(Schema[TicketmasterEvent])
+    val blob    = encoder.encode(event)
+    new String(blob.toArray, StandardCharsets.UTF_8)
   }
 
   private def toCoordinates(

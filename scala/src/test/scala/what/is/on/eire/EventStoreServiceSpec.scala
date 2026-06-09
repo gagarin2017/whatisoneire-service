@@ -12,8 +12,9 @@ object EventStoreServiceSpec extends SimpleIOSuite {
       |  "url": "https://ticketmaster.ie/test",
       |  "startDate": "2026-06-15",
       |  "city": "Dublin",
-      |  "county": "DUBLIN",
-      |  "source": "Ticketmaster"
+      |  "county": "IE-D",
+      |  "source": "Ticketmaster",
+      |  "rawPayload": "{}"
       |}""".stripMargin
 
   private val anotherValidJson: String =
@@ -23,8 +24,9 @@ object EventStoreServiceSpec extends SimpleIOSuite {
       |  "url": "https://ticketmaster.ie/cork",
       |  "startDate": "2026-07-01",
       |  "city": "Cork",
-      |  "county": "CORK",
-      |  "source": "Ticketmaster"
+      |  "county": "IE-C",
+      |  "source": "Ticketmaster",
+      |  "rawPayload": "{}"
       |}""".stripMargin
 
   test("processBatch saves all valid records and reports correct count") {

@@ -14,7 +14,8 @@ object IngestionServiceSpec extends SimpleIOSuite {
     county = IrishCounty.DUBLIN,
     source = "Ticketmaster",
     startTime = None,
-    coordinates = None
+    coordinates = None,
+    rawPayload = "{}"
   )
 
   private val sampleEvent1 = IrishEvent(
@@ -26,7 +27,8 @@ object IngestionServiceSpec extends SimpleIOSuite {
     county = IrishCounty.DUBLIN,
     source = "Ticketmaster",
     startTime = None,
-    coordinates = None
+    coordinates = None,
+    rawPayload = "{}"
   )
 
   test("fetchEvents calls fetchByCity when irish-location header is present") {

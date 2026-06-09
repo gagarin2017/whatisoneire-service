@@ -3,6 +3,8 @@ package what.is.on.eire
 import cats.effect.IO
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import smithy4s.Schema
+import smithy4s.json.Json
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.core.SdkBytes
@@ -26,30 +28,12 @@ class KinesisEventPublisher(
     ()
   }
 
-  /** Minimal JSON serialization for IrishEvent.
-    *
-    * In a later tutorial we'll replace this with a proper JSON library (circe or smithy4s generated
-    * JSON codecs). For now it works.
-    */
+  /** Serialize an [[IrishEvent]] to JSON using smithy4s generated codecs. */
   private def serializeEvent(e: IrishEvent): String = {
-    val lat       = e.coordinates.map(_.latitude).getOrElse(0.0)
-    val lng       = e.coordinates.map(_.longitude).getOrElse(0.0)
-    val timeField = e.startTime.map(t => s""""startTime": "$t",""").getOrElse("")
-    s"""{
-       |  "id": "${e.id}",
-       |  "title": "${escape(e.title)}",
-       |  "url": "${escape(e.url)}",
-       |  "startDate": "${e.startDate}",
-       |  ${timeField}
-       |  "city": "${escape(e.city)}",
-       |  "county": "${e.county}",
-       |  "coordinates": { "latitude": $lat, "longitude": $lng },
-       |  "source": "${e.source}"
-       |}""".stripMargin
+    val encoder = Json.payloadCodecs.encoders.fromSchema(Schema[IrishEvent])
+    val blob    = encoder.encode(e)
+    new String(blob.toArray, StandardCharsets.UTF_8)
   }
-
-  private def escape(s: String): String =
-    s.replace("\\", "\\\\").replace("\"", "\\\"")
 }
 
 object KinesisEventPublisher {

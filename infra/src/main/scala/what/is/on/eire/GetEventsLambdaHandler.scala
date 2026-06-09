@@ -8,7 +8,8 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
-/** Lambda handler that reads events from DynamoDB.
+/** Lambda handler that reads events from DynamoDB, enriches them from rawPayload, and returns
+  * [[EnrichedEvent]] records for the frontend.
   *
   * Expects a JSON payload with an optional `irish-location` header:
   * {{{
@@ -43,20 +44,24 @@ class GetEventsLambdaHandler extends RequestStreamHandler {
     logger.log(s"City filter: ${city.getOrElse("ALL")}")
 
     try {
-      val events = DynamoDbEventRepository
+      val enriched = DynamoDbEventRepository
         .resource(tableName, localstackPort)
         .use { repo =>
           repo.getEvents(city)
         }
+        .map { events =>
+          val enrichment = new EnrichmentService(List(new TicketmasterEnricher))
+          events.map(enrichment.enrich)
+        }
         .unsafeRunSync()
 
-      logger.log(s"Found ${events.size} events")
+      logger.log(s"Found ${enriched.size} events, enriched for frontend")
 
       import smithy4s.Schema
 
-      val listSchema = smithy4s.schema.Schema.list(Schema[IrishEvent])
+      val listSchema = smithy4s.schema.Schema.list(Schema[EnrichedEvent])
       val encoder    = smithy4s.json.Json.payloadCodecs.encoders.fromSchema(listSchema)
-      val blob       = encoder.encode(events)
+      val blob       = encoder.encode(enriched)
       val jsonBytes  = blob.toArray
       output.write(jsonBytes)
     } catch {

@@ -14,9 +14,10 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
         |  "startDate": "2026-08-15",
         |  "startTime": "20:00:00",
         |  "city": "Dublin",
-        |  "county": "DUBLIN",
+        |  "county": "IE-D",
         |  "coordinates": { "latitude": 53.3498, "longitude": -6.2603 },
-        |  "source": "Ticketmaster"
+        |  "source": "Ticketmaster",
+        |  "rawPayload": "{}"
         |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
@@ -41,8 +42,9 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
           |  "url": "https://ticketmaster.ie/galway",
           |  "startDate": "2026-07-20",
           |  "city": "Galway",
-          |  "county": "GALWAY",
-          |  "source": "Ticketmaster"
+          |  "county": "IE-G",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
@@ -62,8 +64,9 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
           |  "url": "https://ticketmaster.ie/cork",
           |  "startDate": "2026-10-25",
           |  "city": "Cork",
-          |  "county": "CORK",
-          |  "source": "Ticketmaster"
+          |  "county": "IE-C",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
@@ -80,8 +83,9 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
       """{
           |  "title": "No ID Event",
           |  "city": "Dublin",
-          |  "county": "DUBLIN",
-          |  "source": "Ticketmaster"
+          |  "county": "IE-D",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
@@ -89,45 +93,42 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
     }
   }
 
-  test("parse succeeds when url is missing (optional field — defaults to empty string)") {
+  test("parse succeeds when url is present but empty") {
     val json =
       """{
           |  "id": "EVT100",
           |  "title": "No URL Event",
+          |  "url": "",
           |  "startDate": "2026-06-01",
           |  "city": "Dublin",
-          |  "county": "DUBLIN",
-          |  "source": "Ticketmaster"
+          |  "county": "IE-D",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
-      expect.all(
-        result.isDefined,
-        result.get.url == ""
-      )
+      expect(result.isDefined)
     }
   }
 
-  test("parse succeeds when startDate is missing (optional field — defaults to empty string)") {
+  test("parse returns None when a required field (startDate) is truly absent") {
     val json =
       """{
           |  "id": "EVT101",
           |  "title": "No Date Event",
           |  "url": "https://ticketmaster.ie/no-date",
           |  "city": "Galway",
-          |  "county": "GALWAY",
-          |  "source": "Ticketmaster"
+          |  "county": "IE-G",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>
-      expect.all(
-        result.isDefined,
-        result.get.startDate == ""
-      )
+      expect(result == None)
     }
   }
 
-  test("parse succeeds with UNKNOWN county when county is not a recognised IrishCounty") {
+  test("parse succeeds with UNKNOWN county") {
     val json =
       """{
           |  "id": "EVT003",
@@ -135,8 +136,9 @@ object KinesisRecordParserSpec extends SimpleIOSuite {
           |  "url": "https://ticketmaster.ie/mystery",
           |  "startDate": "2026-06-01",
           |  "city": "Nowhere",
-          |  "county": "NARNIA",
-          |  "source": "Ticketmaster"
+          |  "county": "UNKNOWN",
+          |  "source": "Ticketmaster",
+          |  "rawPayload": "{}"
           |}""".stripMargin
 
     IO(KinesisRecordParser.parse(json)).map { result =>

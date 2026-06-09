@@ -6,28 +6,31 @@ namespace what.is.on.eire
 structure IrishEvent {
     @required
     id: String,
-    
+
     @required
     title: String,
-    
+
     @required
     url: String,
-    
+
     @required
     startDate: String, // Format: YYYY-MM-DD
-    
+
     startTime: String, // Format: HH:MM:SS (Optional)
-    
+
     @required
     city: String,
-    
+
     @required
     county: IrishCounty,
-    
+
     coordinates: GeoCoordinates,
-    
+
     @required
     source: String
+
+    @required
+    rawPayload: String  // Full source‑API JSON blob — used for enrichment at read‑time
 }
 
 list IrishEventList {

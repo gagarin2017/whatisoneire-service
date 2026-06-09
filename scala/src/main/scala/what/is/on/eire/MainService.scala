@@ -18,7 +18,8 @@ class MainService[F[_]: MonadThrow](ticketmasterClient: TicketmasterClient[F])
     city = "Dublin",
     county = IrishCounty.DUBLIN,
     coordinates = Some(sampleCoordinates),
-    source = "Ticketmaster"
+    source = "Ticketmaster",
+    rawPayload = "{}"
   )
 
   override def pullEvents(location: String): F[PullEventsOutput] =
