@@ -35,6 +35,12 @@ structure GetTicketmasterEventsInput {
 
     @httpQuery("page")
     page: Integer,
+
+    @httpQuery("startDateTime")
+    startDateTime: String,
+
+    @httpQuery("endDateTime")
+    endDateTime: String,
 }
 
 // ── Response models ───────────────────────────────────────────────────────

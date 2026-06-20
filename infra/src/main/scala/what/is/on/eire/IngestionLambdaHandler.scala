@@ -17,6 +17,14 @@ class IngestionLambdaHandler extends RequestStreamHandler {
 
   private val apiKey: String = EnvLoader.require("TICKETMASTER_API_KEY")
 
+  /** Number of months ahead from today to pull events for. Configured via `EVENTS_LOOKAHEAD_MONTHS`
+    * in the `.env` file or as an environment variable.
+    */
+  private val lookAheadMonths: Int =
+    EnvLoader
+      .require("EVENTS_LOOKAHEAD_MONTHS")
+      .toInt
+
   override def handleRequest(
     input: InputStream,
     output: OutputStream,
@@ -26,7 +34,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
     logger.log("WhatsOnEire Ingestion Lambda invoked!")
 
     val rawInput = new String(input.readAllBytes(), StandardCharsets.UTF_8)
-    logger.log(s"Incoming event payload (first 200 chars): ${rawInput.take(200)}")
+    logger.log(s"Incoming event payload: $rawInput")
 
     // ── Build http4s client ──────────────────────────────────────────
     val httpClient: Resource[cats.effect.IO, Client[cats.effect.IO]] =
@@ -46,7 +54,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
         KinesisEventPublisher.resource("events-raw-stream", localstackPort)
       }
     } yield {
-      val tmClient = new TicketmasterClient[cats.effect.IO](tmApi, apiKey)
+      val tmClient = new TicketmasterClient[cats.effect.IO](tmApi, apiKey, lookAheadMonths)
 
       val service = new IngestionService[IO](
         fetchByCity = city => tmClient.getEvents(city),

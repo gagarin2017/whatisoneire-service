@@ -38,7 +38,7 @@ class GetEventsLambdaHandler extends RequestStreamHandler {
     logger.log("WhatsOnEire GetEvents Lambda invoked!")
 
     val rawInput = new String(input.readAllBytes(), StandardCharsets.UTF_8)
-    logger.log(s"Incoming payload (first 200 chars): ${rawInput.take(200)}")
+    logger.log(s"Incoming payload: $rawInput")
 
     val city = CityHeaderParser.parse(rawInput)
     logger.log(s"City filter: ${city.getOrElse("ALL")}")
@@ -86,8 +86,8 @@ class GetEventsLambdaHandler extends RequestStreamHandler {
     * unambiguous — `"page":` cannot match inside `"pageSize":`.
     */
   private def parsePagination(rawInput: String): (Int, Int) = {
-    val pageRegex     = """"page"\s*:\s*(\d+)""".r
-    val pageSizeRegex = """"pageSize"\s*:\s*(\d+)""".r
+    val pageRegex     = """\\?"page\\?"\s*:\s*(\d+)""".r
+    val pageSizeRegex = """\\?"pageSize\\?"\s*:\s*(\d+)""".r
     val page          = pageRegex.findFirstMatchIn(rawInput).map(m => m.group(1).toInt).getOrElse(0)
     val pageSize      = pageSizeRegex.findFirstMatchIn(rawInput).map(m => m.group(1).toInt).getOrElse(10)
     (page, pageSize)

@@ -18,6 +18,9 @@ object Main extends IOApp.Simple {
   private val apiKey: String =
     readDotEnvValue("http/.env", "TICKETMASTER_API_KEY")
 
+  private val lookAheadMonths: Int =
+    readDotEnvValue("http/.env", "EVENTS_LOOKAHEAD_MONTHS").toInt
+
   private def readDotEnvValue(path: String, key: String): String = {
     val envPath = Paths.get(path)
     if (!Files.exists(envPath))
@@ -45,7 +48,7 @@ object Main extends IOApp.Simple {
       routes          <- SimpleRestJsonBuilder
                            .routes(
                              new MainService[IO](
-                               new TicketmasterClient[IO](ticketmasterApi, apiKey)
+                               new TicketmasterClient[IO](ticketmasterApi, apiKey, lookAheadMonths)
                              )
                            )
                            .resource
