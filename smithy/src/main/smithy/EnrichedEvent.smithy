@@ -102,3 +102,21 @@ structure ArtistLinks {
 list EnrichedEventList {
     member: EnrichedEvent
 }
+
+/// Paginated wrapper returned by the GetEvents API.
+structure PaginatedEvents {
+    @required
+    events: EnrichedEventList,
+
+    @required
+    page: Integer,
+
+    @required
+    pageSize: Integer,
+
+    @required
+    totalEvents: Integer,
+
+    @required
+    totalPages: Integer,
+}

@@ -1,12 +1,15 @@
 package what.is.on.eire
 
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import cats.effect.unsafe.IORuntime
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
+import org.http4s.client.Client
+import org.http4s.ember.client.EmberClientBuilder
 
 class IngestionLambdaHandler extends RequestStreamHandler {
 
@@ -26,13 +29,10 @@ class IngestionLambdaHandler extends RequestStreamHandler {
     logger.log(s"Incoming event payload (first 200 chars): ${rawInput.take(200)}")
 
     // ── Build http4s client ──────────────────────────────────────────
-    val httpClient
-      : cats.effect.kernel.Resource[cats.effect.IO, org.http4s.client.Client[cats.effect.IO]] =
-      org.http4s.ember.client.EmberClientBuilder
-        .default[cats.effect.IO]
-        .build
+    val httpClient: Resource[cats.effect.IO, Client[cats.effect.IO]] =
+      EmberClientBuilder.default[cats.effect.IO].build
 
-    // ── Extract client & build TicketmasterApi in the for-comp ───────
+    // ── Build the program as a Resource ─────────────────────────────
     val program = for {
       client    <- httpClient
       tmApi     <- smithy4s.http4s
@@ -53,6 +53,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
         fetchAll = tmClient.getAllEvents
       )
 
+      logger.log("Calling Ticketmaster API to fetch events...")
       val events = service.fetchEvents(rawInput).unsafeRunSync()
       logger.log(s"Fetched ${events.size} events from Ticketmaster")
 
@@ -70,7 +71,7 @@ class IngestionLambdaHandler extends RequestStreamHandler {
         s"""{"status": "SUCCESS", "count": ${events.size}, "message": "Published ${events.size} events to Kinesis"}"""
       output.write(result.getBytes(StandardCharsets.UTF_8))
     } catch {
-      case e: Exception =>
+      case e: Throwable =>
         logger.log(s"ERROR: ${e.getMessage}\n${e.getStackTrace.map(_.toString).mkString("\n")}")
         val error = s"""{"status": "FAILED", "message": "${e.getMessage}"}"""
         output.write(error.getBytes(StandardCharsets.UTF_8))

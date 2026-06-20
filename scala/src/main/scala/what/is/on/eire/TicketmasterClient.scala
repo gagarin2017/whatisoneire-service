@@ -1,12 +1,13 @@
 package what.is.on.eire
 
-import cats.Functor
+import cats.Monad
+import cats.syntax.flatMap._
 import cats.syntax.functor._
 import java.nio.charset.StandardCharsets
 import smithy4s.Schema
 import smithy4s.json.Json
 
-class TicketmasterClient[F[_]: Functor](
+class TicketmasterClient[F[_]: Monad](
   api: TicketmasterApi[F],
   apiKey: String
 ) {
@@ -14,17 +15,47 @@ class TicketmasterClient[F[_]: Functor](
   /** Fetch events for a specific Irish city. */
   def getEvents(city: String): F[List[IrishEvent]] =
     api
-      .getTicketmasterEvents("IE", apiKey, Some(city))
+      .getTicketmasterEvents("IE", apiKey, Some(city), None, None)
       .map(toIrishEvents(_, Some(city)))
 
-  /** Fetch ALL events across Ireland (no city filter).
+  /** Maximum results per page accepted by the Ticketmaster Discovery API.
     *
-    * Used by the cron-triggered ingestion to get everything without knowing which cities exist.
+    * The API rejects `size >= 200` with error code DIS1036. Using the max (199) minimises the
+    * number of round-trips when paginating through all events.
+    */
+  private val maxPageSize: Int = 199
+
+  /** Maximum paging offset (page * size) allowed by the Ticketmaster Discovery API.
+    *
+    * The API rejects requests where `(page * size) >= 1000` with error code DIS1035. This means we
+    * can fetch at most 999 items from the start (e.g. pages 0-5 with size=199). The API's
+    * `resp.page.totalPages` can be misleading because it's sometimes computed at the default page
+    * size of 20 rather than the requested size, so we enforce this limit as a hard safety check.
+    */
+  private val maxPagingDepth: Int = 999
+
+  /** Fetch ALL events across every Irish city by paginating through every page.
+    *
+    * Starts with page 0, reads `totalPages` from the response, then fetches remaining pages
+    * sequentially. Uses the maximum allowed page size to reduce the number of HTTP round-trips.
     */
   def getAllEvents: F[List[IrishEvent]] =
-    api
-      .getTicketmasterEvents("IE", apiKey, None)
-      .map(toIrishEvents(_, None))
+    fetchAllPages(maxPageSize, 0, Nil)
+
+  private def fetchAllPages(
+    size: Int,
+    page: Int,
+    acc: List[IrishEvent]
+  ): F[List[IrishEvent]] = {
+    val response = api.getTicketmasterEvents("IE", apiKey, None, Some(size), Some(page))
+    response.flatMap { resp =>
+      val events  = acc ++ toIrishEvents(resp, None)
+      val totalPg = resp.page.totalPages
+      val nextPg  = page + 1
+      if (nextPg < totalPg && nextPg * size <= maxPagingDepth) fetchAllPages(size, nextPg, events)
+      else Monad[F].pure(events)
+    }
+  }
 
   private def toIrishEvents(
     response: TicketmasterResponse,

@@ -29,13 +29,36 @@ structure GetTicketmasterEventsInput {
     @required
     @httpQuery("apikey")
     apiKey: String,
+
+    @httpQuery("size")
+    size: Integer,
+
+    @httpQuery("page")
+    page: Integer,
 }
 
 // ── Response models ───────────────────────────────────────────────────────
 
 structure TicketmasterResponse {
     @required
-    _embedded: TicketmasterEmbeddedEvents
+    _embedded: TicketmasterEmbeddedEvents,
+
+    @required
+    page: TicketmasterPage,
+}
+
+structure TicketmasterPage {
+    @required
+    size: Integer,
+
+    @required
+    totalElements: Integer,
+
+    @required
+    totalPages: Integer,
+
+    @required
+    number: Integer,
 }
 
 structure TicketmasterEmbeddedEvents {

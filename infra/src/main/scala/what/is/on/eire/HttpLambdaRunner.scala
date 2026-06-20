@@ -34,20 +34,26 @@ object HttpLambdaRunner extends IOApp.Simple {
 
         // ── Ingest events from Ticketmaster ────────────────────────────
         case req @ GET -> Root / "event" / "pullEvents" =>
-          val location = req.headers
-            .get(org.typelevel.ci.CIString("irish-location"))
-            .map(_.head.value)
-          location match {
-            case Some(city) => Ok(invokeLambda(city))
-            case None       => BadRequest("Missing irish-location header")
-          }
-
-        // ── Read events from DynamoDB ──────────────────────────────────
-        case req @ GET -> Root / "getEvents"            =>
           val city = req.headers
             .get(org.typelevel.ci.CIString("irish-location"))
             .map(_.head.value)
-          Ok(invokeReadLambda(city))
+          Ok(invokeLambda(city))
+
+        // Simulate EventBridge cron
+        case GET -> Root / "cron" / "trigger"           =>
+          Ok(invokeLambda(None))
+
+        // ── Read events from DynamoDB ──────────────────────────────────
+        case req @ GET -> Root / "getEvents"            =>
+          val city      = req.headers
+            .get(org.typelevel.ci.CIString("irish-location"))
+            .map(_.head.value)
+          val rawParams = req.uri.query.params
+          println(s"[HttpLambdaRunner] query params: $rawParams")
+          val page      = rawParams.get("page").flatMap(_.toIntOption).getOrElse(0)
+          val pageSize  = rawParams.get("pageSize").flatMap(_.toIntOption).getOrElse(10)
+          println(s"[HttpLambdaRunner] page=$page pageSize=$pageSize city=$city")
+          Ok(invokeReadLambda(city, page, pageSize))
       })
 
     val port = com.comcast.ip4s.Port
@@ -64,19 +70,12 @@ object HttpLambdaRunner extends IOApp.Simple {
       .useForever
   }
 
-  /** Build a Lambda input payload and invoke the Ingestion Lambda. */
-  private def invokeLambda(location: String): String = {
-    val inputJson =
-      s"""{
-         |  "headers": { "irish-location": "$location" },
-         |  "body": "{}"
-         |}""".stripMargin
-
-    invokeHandler(ingestionHandler, inputJson)
-  }
-
-  /** Build a Lambda input payload and invoke the GetEvents Lambda. */
-  private def invokeReadLambda(city: Option[String]): String = {
+  /** Build a Lambda input payload and invoke the Ingestion Lambda.
+    *
+    * When `city` is `Some`, only that city's events are fetched. When `city` is `None`, ALL events
+    * across Ireland are fetched.
+    */
+  private def invokeLambda(city: Option[String]): String = {
     val headerField = city match {
       case Some(c) => s""""irish-location": "$c""""
       case None    => ""
@@ -85,6 +84,26 @@ object HttpLambdaRunner extends IOApp.Simple {
       s"""{
          |  "headers": { $headerField },
          |  "body": "{}"
+         |}""".stripMargin
+
+    invokeHandler(ingestionHandler, inputJson)
+  }
+
+  /** Build a Lambda input payload and invoke the GetEvents Lambda with pagination. */
+  private def invokeReadLambda(
+    city: Option[String],
+    page: Int = 0,
+    pageSize: Int = 10
+  ): String = {
+    val headerField = city match {
+      case Some(c) => s""""irish-location": "$c""""
+      case None    => ""
+    }
+    val inputJson   =
+      s"""{
+         |  "headers": { $headerField },
+         |  "page": $page,
+         |  "pageSize": $pageSize
          |}""".stripMargin
 
     invokeHandler(getEventsHandler, inputJson)

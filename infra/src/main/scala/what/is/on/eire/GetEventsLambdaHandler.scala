@@ -9,14 +9,14 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
 /** Lambda handler that reads events from DynamoDB, enriches them from rawPayload, and returns
-  * [[EnrichedEvent]] records for the frontend.
+  * [[EnrichedEvent]] records for the frontend with pagination.
   *
   * Expects a JSON payload with an optional `irish-location` header:
   * {{{
-  *   { "headers": { "irish-location": "Dublin" }, "body": "{}" }
+  *   { "headers": { "irish-location": "Dublin" }, "body": "{ \"page\": 2, \"pageSize\": 10 }" }
   * }}}
   * If the header is present, only events matching that city are returned. If absent, all events are
-  * returned.
+  * returned. Default pagination is page=0, pageSize=10.
   */
 class GetEventsLambdaHandler extends RequestStreamHandler {
 
@@ -43,33 +43,54 @@ class GetEventsLambdaHandler extends RequestStreamHandler {
     val city = CityHeaderParser.parse(rawInput)
     logger.log(s"City filter: ${city.getOrElse("ALL")}")
 
+    val (page, pageSize) = parsePagination(rawInput)
+    logger.log(s"Pagination: page=$page, pageSize=$pageSize")
+
     try {
-      val enriched = DynamoDbEventRepository
+      val (enriched, totalCount) = DynamoDbEventRepository
         .resource(tableName, localstackPort)
         .use { repo =>
-          repo.getEvents(city)
+          repo.getEventsPaginated(city, page, pageSize)
         }
-        .map { events =>
+        .map { case (events, totalCount) =>
           val enrichment = new EnrichmentService(List(new TicketmasterEnricher))
-          events.map(enrichment.enrich)
+          val enriched   = events.map(enrichment.enrich)
+          (enriched, totalCount)
         }
         .unsafeRunSync()
 
-      logger.log(s"Found ${enriched.size} events, enriched for frontend")
+      logger.log(s"Found $totalCount total events, returning page $page with ${enriched.size}")
 
       import smithy4s.Schema
 
-      val listSchema = smithy4s.schema.Schema.list(Schema[EnrichedEvent])
-      val encoder    = smithy4s.json.Json.payloadCodecs.encoders.fromSchema(listSchema)
-      val blob       = encoder.encode(enriched)
-      val jsonBytes  = blob.toArray
-      output.write(jsonBytes)
+      val eventsSchema = smithy4s.schema.Schema.list(Schema[EnrichedEvent])
+      val encoder      = smithy4s.json.Json.payloadCodecs.encoders.fromSchema(eventsSchema)
+      val eventsBlob   = encoder.encode(enriched)
+      val eventsJson   = new String(eventsBlob.toArray, StandardCharsets.UTF_8)
+
+      val totalPages = Math.ceil(totalCount.toDouble / pageSize).toInt
+      val response   =
+        s"""{"page":$page,"pageSize":$pageSize,"totalEvents":$totalCount,"totalPages":$totalPages,"events":$eventsJson}"""
+      output.write(response.getBytes(StandardCharsets.UTF_8))
     } catch {
-      case e: Exception =>
+      case e: Throwable =>
         logger.log(s"ERROR: ${e.getMessage}\n${e.getStackTrace.map(_.toString).mkString("\n")}")
         val error = s"""{"status": "FAILED", "message": "${e.getMessage}"}"""
         output.write(error.getBytes(StandardCharsets.UTF_8))
     }
+  }
+
+  /** Parse pagination params from the request payload. Defaults to page=0, pageSize=10.
+    *
+    * Matches JSON keys `"page"` and `"pageSize"` at the top level. The double-quoted key names are
+    * unambiguous — `"page":` cannot match inside `"pageSize":`.
+    */
+  private def parsePagination(rawInput: String): (Int, Int) = {
+    val pageRegex     = """"page"\s*:\s*(\d+)""".r
+    val pageSizeRegex = """"pageSize"\s*:\s*(\d+)""".r
+    val page          = pageRegex.findFirstMatchIn(rawInput).map(m => m.group(1).toInt).getOrElse(0)
+    val pageSize      = pageSizeRegex.findFirstMatchIn(rawInput).map(m => m.group(1).toInt).getOrElse(10)
+    (page, pageSize)
   }
 
 }

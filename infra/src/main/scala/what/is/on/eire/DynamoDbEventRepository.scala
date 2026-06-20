@@ -88,6 +88,27 @@ class DynamoDbEventRepository(
     }
   }
 
+  def getEventsPaginated(
+    city: Option[String],
+    page: Int,
+    pageSize: Int
+  ): IO[(List[IrishEvent], Int)] = IO {
+    val scanRequest = ScanRequest.builder
+      .tableName(tableName)
+      .build()
+    val result      = client.scan(scanRequest)
+    val allItems    = result.items().asScala.toList.map(itemToEvent)
+    val filtered    = city match {
+      case Some(c) => allItems.filter(_.city.equalsIgnoreCase(c))
+      case None    => allItems
+    }
+    // Sort by startDate then id for deterministic ordering across pages
+    val sorted      = filtered.sortBy(e => (e.startDate, e.id))
+    val totalCount  = sorted.size
+    val pageItems   = sorted.drop(page * pageSize).take(pageSize)
+    (pageItems, totalCount)
+  }
+
   /** Convert a DynamoDB item (Map[String, AttributeValue]) to an [[IrishEvent]]. */
   private def itemToEvent(item: java.util.Map[String, AttributeValue]): IrishEvent = {
     val attrs = item.asScala

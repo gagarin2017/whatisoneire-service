@@ -36,8 +36,8 @@ lazy val scalaModule = (project in file("scala"))
 // Infrastructure Layer - This houses your Lambda handlers and AWS specifics
 lazy val infra = (project in file("infra"))
   .settings(
-    name                             := "whats-on-eire-infra",
-    Compile / mainClass              := Some("what.is.on.eire.HttpLambdaRunner"),
+    name                                         := "whats-on-eire-infra",
+    Compile / mainClass                          := Some("what.is.on.eire.HttpLambdaRunner"),
     libraryDependencies ++= Seq(
       "com.amazonaws"          % "aws-lambda-java-core"   % "1.2.3",
       "com.amazonaws"          % "aws-lambda-java-events" % "3.16.1",
@@ -45,7 +45,8 @@ lazy val infra = (project in file("infra"))
       "software.amazon.awssdk" % "dynamodb"               % "2.29.0",
       "software.amazon.awssdk" % "url-connection-client"  % "2.29.0"
     ),
-    assembly / assemblyMergeStrategy := {
+    libraryDependencies += "com.disneystreaming" %% "weaver-cats" % "0.8.4" % Test,
+    assembly / assemblyMergeStrategy             := {
       case PathList("META-INF", "services", _*) => MergeStrategy.concat
       case PathList("META-INF", xs @ _*)        => MergeStrategy.discard
       case _                                    => MergeStrategy.first
@@ -58,5 +59,5 @@ lazy val root = (project in file("."))
   .settings(
     // Now, running or packaging at the root targets the infra module's artifact!
     run / aggregate := false,
-    Compile / run := (infra / Compile / run).evaluated
+    Compile / run   := (infra / Compile / run).evaluated
   )
